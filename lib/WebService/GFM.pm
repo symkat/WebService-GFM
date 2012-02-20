@@ -73,7 +73,7 @@ sub build_ua {
 
     $self->{_ua} = LWP::UserAgent->new( 
         timeout => $self->timeout, 
-        user_agent => $self->useragent 
+        agent => $self->useragent 
     );
     return $self;
 }
@@ -99,7 +99,7 @@ sub markdown {
     my $res = $self->_ua->request( $req );
     bless $res, 'WebService::GFM::Response';
 
-    $res->reply( decode_json( $res->content ) );
+    $res->reply( decode_json( $res->decoded_content ) );
 
     return $res;
 }
