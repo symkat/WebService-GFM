@@ -5,10 +5,11 @@ use LWP::UserAgent;
 use HTTP::Request;
 use JSON qw( decode_json encode_json );
 use WebService::GFM::Response;
+use Encode qw( encode );
 
 use Data::Dumper;
 
-our $VERSION = '0.000001'; # 0.0.1
+our $VERSION = '0.000002'; # 0.0.2
 $VERSION = eval $VERSION;
 
 my @accessors = qw(
@@ -99,7 +100,27 @@ sub markdown {
     my $res = $self->_ua->request( $req );
     bless $res, 'WebService::GFM::Response';
 
-    $res->reply( decode_json( $res->decoded_content ) );
+    # We can depend on this structure being a hashref
+    # with a single layer of keys.
+    my $reply = eval { decode_json( $res->decoded_content ) };
+    if ( $@ ) {
+        $res->reply( encode_json( 
+                { 
+                    status => 0, 
+                    error => "JSON decoding failed: $@" 
+                } 
+            ) 
+        );
+        return $res;
+    }
+
+    for my $key ( keys %{$reply} ) {
+        die "Devel Error: Expected structure for API Responses has changed"
+            if ref $reply->{$key};
+        $reply->{$key} = encode('utf8', $reply->{$key});
+    }
+        
+    $res->reply( $reply );
 
     return $res;
 }
